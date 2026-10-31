@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Melhor Compra de Boardgames",
+  "version": "0.1.0",
+  "description": "Monta a combinação de carrinhos de menor valor total entre as lojas do Compara Jogos, com frete real.",
+  "minimum_chrome_version": "116",
+  "permissions": ["sidePanel", "storage", "cookies"],
+  "host_permissions": ["https://*/*", "http://*/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Melhor Compra de Boardgames"
+  },
+  "side_panel": {
+    "default_path": "panel/panel.html"
+  }
+}

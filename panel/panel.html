@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Melhor Compra de Boardgames</title>
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body>
+  <header>
+    <h1>Melhor compra</h1>
+    <span class="byline">- Por <a href="https://github.com/MauMaykot" target="_blank" rel="noreferrer">Maurício Maykot</a></span>
+    <button id="color-toggle" type="button" aria-label="Ativar modo escuro" title="Ativar modo escuro">
+      <svg id="icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"></path>
+      </svg>
+      <svg id="icon-sun" viewBox="0 0 24 24" aria-hidden="true" hidden>
+        <circle cx="12" cy="12" r="4"></circle>
+        <path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3 7 7M17 17l1.7 1.7M5.3 18.7 7 17M17 7l1.7-1.7"></path>
+      </svg>
+    </button>
+  </header>
+
+  <form id="search-form">
+    <details id="setup" open>
+      <summary class="step-title" tabindex="-1"><span>1.</span> Configuração <small id="setup-info"></small></summary>
+      <label for="zip-code">CEP de entrega</label>
+    <input id="zip-code" inputmode="numeric" autocomplete="off" placeholder="00000-000" maxlength="9">
+
+    <label for="game-input">Adicionar jogo</label>
+    <input id="game-input" autocomplete="off" placeholder="Nome do jogo ou link do Compara Jogos">
+    <ul id="suggestions" hidden></ul>
+
+    <ul id="games"></ul>
+    <p id="games-empty" class="hint">Abra a página de um jogo no Compara Jogos ou busque pelo nome.</p>
+    <button id="refresh-tabs" type="button">Atualizar das abas abertas</button>
+    </details>
+
+    <h2 class="step-title"><span>2.</span> Pesquisa</h2>
+    <fieldset id="payment-mode">
+      <legend>Menor valor pagando</legend>
+      <label><input type="radio" name="payment-mode" value="cash" checked> À vista</label>
+      <label><input type="radio" name="payment-mode" value="installment"> A prazo</label>
+    </fieldset>
+
+    <button id="run" type="submit">
+      <span id="turn-dice"></span>
+      <span id="run-label">Encontrar menor valor</span>
+    </button>
+    <button id="cancel" type="button" hidden>Cancelar busca</button>
+  </form>
+
+  <p id="status" role="status" hidden></p>
+
+  <h2 id="end-title" class="step-title" hidden><span>3.</span> Resultado</h2>
+
+  <details id="coupons" hidden>
+    <summary>Tenho um cupom</summary>
+    <form id="coupon-form">
+      <label for="coupon-store">Loja</label>
+      <select id="coupon-store"></select>
+      <label for="coupon-code">Código do cupom</label>
+      <input id="coupon-code" autocomplete="off" placeholder="Opcional, para lembrar na hora de comprar">
+      <label for="coupon-value">Desconto</label>
+      <div class="coupon-amount">
+        <input id="coupon-value" inputmode="decimal" autocomplete="off" placeholder="0">
+        <select id="coupon-type" aria-label="Tipo de desconto">
+          <option value="percent">%</option>
+          <option value="fixed">R$</option>
+        </select>
+      </div>
+      <button id="apply-coupon" type="submit">Aplicar cupom</button>
+    </form>
+    <ul id="coupon-list"></ul>
+    <p class="hint">O cupom vale só para os jogos, não para o frete.</p>
+  </details>
+
+  <section id="results" aria-live="polite"></section>
+
+  <script type="module" src="panel.js"></script>
+</body>
+</html>
