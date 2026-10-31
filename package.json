@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
+    "test:chrome": "node e2e/chrome.mjs",
     "quote": "node src/cli.js"
   }
 }
