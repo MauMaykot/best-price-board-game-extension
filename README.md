@@ -4,11 +4,29 @@ A Chrome extension that finds the **cheapest real combination of store carts** f
 
 Price comparison sites show the lowest price per game. That is not the lowest total: shipping is unified per store, free-shipping thresholds change with the cart, and splitting an order can cost more than it saves. The only way to know is to ask each store what a specific cart costs, and there is no shared API for that. This project builds the integration layer that makes the question answerable.
 
-<p>
-  <img src="docs/demo.gif" alt="Demo of the side panel: adding games, searching with partial results, switching payment mode, entering manual shipping and enabling dark mode" width="340">
-</p>
+## Demo
 
-<sub>Recorded in the offline test environment, so stores, games and prices are simulated and no real store was contacted. [Watch the sharper MP4](docs/demo.mp4).</sub>
+The extension running on the real Compara Jogos site: it detects the games in the open tabs, then quotes real shipping from the stores. Results reflect prices at the time of recording (October 2026).
+
+![English demo: the side panel detects Compile and Ruins from open tabs and finds the cheapest cart](docs/demo-real-en.gif)
+
+<sub>[Watch the MP4](docs/demo-real-en.mp4). The panel follows the browser language, as the Portuguese version shows.</sub>
+
+<details>
+<summary>Portuguese (pt-BR) version</summary>
+
+![Portuguese demo: the side panel detects Compile and Ruins from open tabs and finds the cheapest cart](docs/demo-real-pt-br.gif)
+
+<sub>[Watch the MP4](docs/demo-real-pt-br.mp4).</sub>
+</details>
+
+<details>
+<summary>More features: installments, manual shipping and dark mode</summary>
+
+<img src="docs/demo.gif" alt="Side panel walkthrough: adding games, searching with partial results, switching payment mode, entering manual shipping and enabling dark mode" width="340">
+
+<sub>Recorded in the offline test environment, so stores, games and prices are simulated and no real store was contacted. [Watch the MP4](docs/demo.mp4).</sub>
+</details>
 
 ## What it does
 
