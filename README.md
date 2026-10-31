@@ -5,11 +5,10 @@ A Chrome extension that finds the **cheapest real combination of store carts** f
 Price comparison sites show the lowest price per game. That is not the lowest total: shipping is unified per store, free-shipping thresholds change with the cart, and splitting an order can cost more than it saves. The only way to know is to ask each store what a specific cart costs, and there is no shared API for that. This project builds the integration layer that makes the question answerable.
 
 <p>
-  <img src="docs/result-light.png" alt="Side panel in light mode with the search form and manual freight inputs" width="300">
-  <img src="docs/result-dark.png" alt="Side panel in dark mode with the winning cart combination" width="300">
+  <img src="docs/demo.gif" alt="Demo of the side panel: adding games, searching with partial results, switching payment mode, entering manual shipping and enabling dark mode" width="340">
 </p>
 
-<sub>Screenshots from the offline test suite, so stores and prices are simulated.</sub>
+<sub>Recorded in the offline test environment, so stores, games and prices are simulated and no real store was contacted. [Watch the sharper MP4](docs/demo.mp4).</sub>
 
 ## What it does
 
