@@ -10,10 +10,6 @@ export function discountPercent(full, paid) {
   return Math.round((1 - paid / full) * 1000) / 10;
 }
 
-export function formatPercent(value) {
-  return `${String(value).replace('.', ',')}%`;
-}
-
 export function summarizeDiscounts(plan, paymentMode) {
   const list = sumItems(plan, (item) => item.listPrice ?? item.price);
   const cash = sumItems(plan, (item) => item.price);

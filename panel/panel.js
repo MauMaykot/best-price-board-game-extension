@@ -2,6 +2,7 @@ import { fetchCatalog, fetchGameSummary, isItemUrl, itemUrl, searchGames, slugFr
 import { applyStoreDiscounts } from '../src/catalog/paymentDiscount.js';
 import { describePrice, fetchPriceHistory } from '../src/catalog/priceHistory.js';
 import { loadStoreIcons } from '../src/catalog/storeIcons.js';
+import { createTranslator, detectLocale } from '../src/i18n/i18n.js';
 import {
   cookieDomain,
   createBrowserSession,
@@ -10,13 +11,12 @@ import {
 } from '../src/extension/isolatedSession.js';
 import { maskZipCode } from '../src/freight/delivery.js';
 import { createQuoter, fillCart, isManualOnly } from '../src/freight/quoter.js';
-import { discountPercent, formatPercent, summarizeDiscounts } from '../src/optimizer/discounts.js';
+import { discountPercent, summarizeDiscounts } from '../src/optimizer/discounts.js';
 import { diceFaces, renderDie } from './sprites.js';
 import { findCheapestCarts } from '../src/optimizer/optimizer.js';
 
 const ITEM_TABS = 'https://www.comparajogos.com.br/item/*';
 const SEARCH_DELAY_MS = 300;
-const RUN_LABEL = 'Encontrar menor valor';
 const MAX_VISIBLE_DICE = 6;
 
 const elements = Object.fromEntries(
@@ -38,7 +38,8 @@ let lastSearch = null;
 let searchAbort = null;
 let searchTimer;
 
-const brl = (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const i18n = createTranslator(detectLocale(navigator.language));
+const { t, brl, percent: formatPercent } = i18n;
 const paymentMode = () => document.querySelector('input[name="payment-mode"]:checked').value;
 const gameName = (slug) => games.get(slug)?.name ?? slug;
 const cartKey = (storeId, offers) => `${storeId}|${offers.map((offer) => offer.gameId).sort().join(',')}`;
@@ -48,6 +49,17 @@ function element(tag, className, text) {
   if (className) node.className = className;
   if (text !== undefined) node.textContent = text;
   return node;
+}
+
+// Erros de rede e da API chegam prontos; os nossos trazem a chave da tradução.
+const errorText = (error) => (error.i18n ? t(...error.i18n) : error.message);
+
+function translatePage() {
+  document.documentElement.lang = i18n.tag;
+  document.title = t('appName');
+  document.querySelectorAll('[data-i18n]').forEach((node) => { node.textContent = t(node.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach((node) => { node.placeholder = t(node.dataset.i18nPlaceholder); });
+  document.querySelectorAll('[data-i18n-aria-label]').forEach((node) => node.setAttribute('aria-label', t(node.dataset.i18nAriaLabel)));
 }
 
 function setStatus(message, isError = false) {
@@ -77,7 +89,7 @@ function renderGames() {
     const row = element('li');
     const remove = element('button', '', '×');
     remove.type = 'button';
-    remove.title = `Remover ${name}`;
+    remove.title = t('removeGame', name);
     remove.addEventListener('click', () => {
       games.delete(slug);
       renderGames();
@@ -117,8 +129,7 @@ async function refreshFromTabs() {
   const before = games.size;
   await loadOpenTabs();
   const added = games.size - before;
-  if (added === 0) setStatus('Nenhum jogo novo nas abas abertas.');
-  else setStatus(added === 1 ? '1 jogo adicionado das abas abertas.' : `${added} jogos adicionados das abas abertas.`);
+  setStatus(added === 0 ? t('noNewTabs') : t('tabsAdded', added));
 }
 
 function hideSuggestions() {
@@ -131,9 +142,9 @@ function showSuggestions(results) {
     const row = element('li');
     const button = element('button');
     button.type = 'button';
-    const offers = game.newOffers === 1 ? '1 oferta' : `${game.newOffers} ofertas`;
+    const offers = t('offerCount', game.newOffers);
     if (game.image) button.append(renderPhoto(game.image));
-    button.append(element('span', '', game.name), element('small', '', game.isExpansion ? `expansão · ${offers}` : offers));
+    button.append(element('span', '', game.name), element('small', '', game.isExpansion ? t('expansion', offers) : offers));
     button.addEventListener('click', () => {
       addGame(game.slug, { name: game.name, image: game.image });
       elements['game-input'].value = '';
@@ -164,7 +175,7 @@ function handleGameInput() {
     try {
       showSuggestions(await searchGames(text));
     } catch (error) {
-      setStatus(error.message, true);
+      setStatus(errorText(error), true);
     }
   }, SEARCH_DELAY_MS);
 }
@@ -173,7 +184,7 @@ function createPanelQuoter(zipCode, signal, onQuote) {
   const quote = createQuoter({ zipCode, createSession: () => createBrowserSession(signal) });
   return async (store, offers) => {
     const key = cartKey(store.id, offers);
-    if (manualFreight.has(key)) return { cost: manualFreight.get(key), service: 'informado por você', manual: true };
+    if (manualFreight.has(key)) return { cost: manualFreight.get(key), service: t('freightByUser'), manual: true };
     if (quoteCache.has(key)) return quoteCache.get(key);
 
     let result = null;
@@ -191,9 +202,9 @@ function createPanelQuoter(zipCode, signal, onQuote) {
 function renderGame(item, href = itemUrl(item.gameId)) {
   const label = element('div', 'game');
   label.append(externalLink('game-name', gameName(item.gameId), href));
-  if (item.maybePreOrder) label.append(element('div', 'pre-order', 'Pode ser pré-venda: confira na loja'));
+  if (item.maybePreOrder) label.append(element('div', 'pre-order', t('maybePreOrder')));
 
-  const note = describePrice(item.price, lastSearch.history.get(item.gameId) ?? []);
+  const note = describePrice(item.price, lastSearch.history.get(item.gameId) ?? [], new Date(), i18n);
   if (note) {
     label.append(element('div', `price-note ${note.tone}`, note.headline));
     if (note.detail) label.append(element('div', 'price-detail', note.detail));
@@ -239,20 +250,21 @@ function renderCancelledResult(plans) {
 function renderPlan(plan, isBest, isPartial = false, canBuy = !isPartial) {
   const card = element('article', isBest ? 'plan best' : 'plan');
   if (isBest && isPartial) {
-    card.append(element('div', 'plan-label', 'Melhor até agora'));
+    card.append(element('div', 'plan-label', t('bestSoFar')));
   } else if (isBest) {
     const winners = plan.carts.map((cart) => cart.storeName).join(' + ');
-    card.append(element('div', 'plan-label', `Vencedor: ${winners}`));
+    card.append(element('div', 'plan-label', t('winner', winners)));
   }
   const hasTwoPrices = plan.installmentTotal > plan.cashTotal;
-  const cashLabel = `${brl(plan.cashTotal)} à vista`;
-  const installmentLabel = `${brl(plan.installmentTotal)} a prazo`;
+  const cashLabel = t('cashPrice', brl(plan.cashTotal));
+  const installmentLabel = t('installmentPrice', brl(plan.installmentTotal));
   const [main, other] = paymentMode() === 'installment' ? [installmentLabel, cashLabel] : [cashLabel, installmentLabel];
   card.append(element('div', 'plan-total', hasTwoPrices ? main : brl(plan.total)));
   if (hasTwoPrices) card.append(element('div', 'plan-full', other));
   const discounts = describeDiscounts(plan);
   if (discounts) card.append(element('div', 'plan-discounts', discounts));
-  card.append(element('div', 'plan-split', `${brl(plan.productsTotal)} em jogos + ${plan.freightTotal === 0 ? 'frete grátis' : `${brl(plan.freightTotal)} de frete`}`));
+  const freight = plan.freightTotal === 0 ? t('freeShipping') : t('freightCost', brl(plan.freightTotal));
+  card.append(element('div', 'plan-split', t('planSplit', brl(plan.productsTotal), freight)));
 
   const blocks = new Map();
   for (const cart of plan.carts) {
@@ -260,7 +272,7 @@ function renderPlan(plan, isBest, isPartial = false, canBuy = !isPartial) {
     blocks.set(cart, block);
     block.append(
       renderStoreName(cart.storeName, cart.storeLogo),
-      element('div', cart.quote.manual ? 'cart-freight manual-tag' : 'cart-freight', `${cart.freight === 0 ? 'Frete grátis' : brl(cart.freight)} · ${cart.quote.service}`),
+      element('div', cart.quote.manual ? 'cart-freight manual-tag' : 'cart-freight', `${cart.freight === 0 ? t('freeShippingTitle') : brl(cart.freight)} · ${cart.quote.service}`),
     );
     for (const item of cart.items) {
       const row = element('div', 'item');
@@ -268,9 +280,9 @@ function renderPlan(plan, isBest, isPartial = false, canBuy = !isPartial) {
       const prices = element('div', 'item-prices', brl(byInstallment ? item.listPrice ?? item.price : item.price));
       if (item.listPrice > item.price) {
         const percent = formatPercent(discountPercent(item.listPrice, item.price));
-        prices.append(element('small', '', byInstallment ? `à vista ${brl(item.price)} (-${percent})` : `a prazo ${brl(item.listPrice)} (-${percent} à vista)`));
+        prices.append(element('small', '', byInstallment ? t('itemCash', brl(item.price), percent) : t('itemInstallment', brl(item.listPrice), percent)));
       }
-      prices.append(externalLink('store-link', 'ver na loja', item.url));
+      prices.append(externalLink('store-link', t('viewInStore'), item.url));
       const { image } = games.get(item.gameId) ?? {};
       if (image) row.append(renderPhoto(image));
       row.append(renderGame(item), prices);
@@ -278,12 +290,12 @@ function renderPlan(plan, isBest, isPartial = false, canBuy = !isPartial) {
     }
     if (plan.carts.length > 1 && cart.items.length > 1) block.append(renderCartSubtotal(cart));
     if (cart.couponSavings > 0) block.append(renderCouponLine(cart));
-    if (cart.quote.preOrder) block.append(element('div', 'pre-order', 'Pré-venda, segundo a loja'));
+    if (cart.quote.preOrder) block.append(element('div', 'pre-order', t('preOrder')));
     card.append(block);
   }
 
   if (canBuy) {
-    const button = element('button', 'go-to-store', plan.carts.length === 1 ? 'Ir para a loja' : `Ir para as ${plan.carts.length} lojas`);
+    const button = element('button', 'go-to-store', plan.carts.length === 1 ? t('goToStore') : t('goToStores', plan.carts.length));
     button.type = 'button';
     button.addEventListener('click', () => goToStores(plan, blocks, button));
     card.append(button);
@@ -317,29 +329,29 @@ function renderStoreName(name, logo) {
 function describeDiscounts(plan) {
   const { cash, coupon, combined } = summarizeDiscounts(plan, paymentMode());
   const parts = [];
-  if (cash > 0) parts.push(`Desconto à vista: ${formatPercent(cash)}`);
-  if (coupon > 0) parts.push(`Cupom: ${formatPercent(coupon)}`);
-  if (cash > 0 && coupon > 0 && paymentMode() === 'cash') parts.push(`Total: ${formatPercent(combined)}`);
+  if (cash > 0) parts.push(t('discountCash', formatPercent(cash)));
+  if (coupon > 0) parts.push(t('discountCoupon', formatPercent(coupon)));
+  if (cash > 0 && coupon > 0 && paymentMode() === 'cash') parts.push(t('discountTotal', formatPercent(combined)));
   return parts.join(' · ');
 }
 
 function renderCartSubtotal(cart) {
-  const cash = `${brl(cart.cashSubtotal)} à vista`;
-  const installment = `${brl(cart.installmentSubtotal)} a prazo`;
+  const cash = t('cashPrice', brl(cart.cashSubtotal));
+  const installment = t('installmentPrice', brl(cart.installmentSubtotal));
   const text = cart.installmentSubtotal > cart.cashSubtotal ? `${cash} · ${installment}` : brl(cart.subtotal);
-  return element('div', 'cart-subtotal', `Subtotal: ${text}`);
+  return element('div', 'cart-subtotal', t('subtotal', text));
 }
 
 function renderCouponLine(cart) {
   const { code } = coupons.get(cart.storeId) ?? {};
   const percent = formatPercent(discountPercent(cart.subtotal + cart.couponSavings, cart.subtotal));
-  const line = element('div', 'cart-coupon', `Cupom${code ? ` ${code}` : ''}: -${brl(cart.couponSavings)} (${percent}) nos jogos`);
+  const line = element('div', 'cart-coupon', t('couponLine', code, brl(cart.couponSavings), percent));
   if (code) {
-    const copy = element('button', 'copy-coupon', 'Copiar');
+    const copy = element('button', 'copy-coupon', t('copy'));
     copy.type = 'button';
     copy.addEventListener('click', async () => {
       await navigator.clipboard.writeText(code);
-      copy.textContent = 'Copiado';
+      copy.textContent = t('copied');
     });
     line.append(copy);
   }
@@ -348,7 +360,7 @@ function renderCouponLine(cart) {
 
 function couponNote(code, applied) {
   if (!code) return '';
-  return applied ? ` Cupom ${code} aplicado.` : ` Cole o cupom ${code} na loja antes de pagar.`;
+  return applied ? t('couponApplied', code) : t('couponPaste', code);
 }
 
 async function openCart(cart) {
@@ -357,30 +369,30 @@ async function openCart(cart) {
   const filled = filledCarts.get(key);
   if (filled) {
     await chrome.tabs.create({ url: filled.cartUrl, active: false });
-    return `Carrinho reaberto.${couponNote(code, filled.couponApplied)}`;
+    return `${t('cartReopened')}${couponNote(code, filled.couponApplied)}`;
   }
 
   const result = await fillCart(cart.items, code, createBrowserSession()).catch(() => null);
   if (!result) {
     await Promise.all(cart.items.map(({ url }) => chrome.tabs.create({ url, active: false })));
-    return `Abri a página dos jogos: adicione ao carrinho na loja.${couponNote(code, false)}`;
+    return `${t('cartPagesOpened')}${couponNote(code, false)}`;
   }
 
   filledCarts.set(key, result);
   await chrome.tabs.create({ url: result.cartUrl, active: false });
-  return `Carrinho montado.${couponNote(code, result.couponApplied)}`;
+  return `${t('cartFilled')}${couponNote(code, result.couponApplied)}`;
 }
 
 async function goToStores(plan, blocks, button) {
   button.disabled = true;
   for (const cart of plan.carts) {
-    setStatus(`Montando o carrinho: ${cart.storeName}`);
+    setStatus(t('fillingCart', cart.storeName));
     const note = await openCart(cart);
     const block = blocks.get(cart);
     block.querySelector('.cart-result')?.remove();
     block.append(element('div', 'cart-result', note));
   }
-  setStatus('Pronto: confira os carrinhos nas abas abertas.');
+  setStatus(t('cartsReady'));
   button.disabled = false;
 }
 
@@ -398,8 +410,8 @@ function parseAmount(text) {
 }
 
 function describeCoupon({ type, value, code }) {
-  const amount = type === 'percent' ? `${String(value).replace('.', ',')}%` : brl(value);
-  return `${amount} nos jogos${code ? ` (${code})` : ''}`;
+  const amount = type === 'percent' ? formatPercent(value) : brl(value);
+  return t('couponAmount', amount, code);
 }
 
 function renderCoupons() {
@@ -421,7 +433,7 @@ function renderCoupons() {
     const row = element('li');
     const remove = element('button', '', '×');
     remove.type = 'button';
-    remove.title = `Remover cupom de ${coupon.storeName}`;
+    remove.title = t('removeCoupon', coupon.storeName);
     remove.addEventListener('click', () => {
       coupons.delete(storeId);
       recalculate();
@@ -438,7 +450,7 @@ function addCoupon(event) {
   const type = elements['coupon-type'].value;
   const value = parseAmount(elements['coupon-value'].value);
   if (!value || (type === 'percent' && value > 100)) {
-    setStatus(type === 'percent' ? 'Informe um percentual entre 0 e 100.' : 'Informe um valor de cupom válido.', true);
+    setStatus(type === 'percent' ? t('invalidPercent') : t('invalidCoupon'), true);
     return;
   }
 
@@ -459,12 +471,12 @@ function renderManualCart(cart) {
 
   const input = element('input');
   input.inputMode = 'decimal';
-  input.placeholder = 'R$ 0,00';
-  input.setAttribute('aria-label', `Frete de ${cart.storeName}`);
+  input.placeholder = t('moneyPlaceholder');
+  input.setAttribute('aria-label', t('freightOf', cart.storeName));
 
-  const limit = cart.maxFreightToWin === null ? 'Informe para comparar' : `Vence se o frete for até ${brl(cart.maxFreightToWin)}`;
+  const limit = cart.maxFreightToWin === null ? t('enterToCompare') : t('winsUpTo', brl(cart.maxFreightToWin));
   row.append(
-    renderStoreName(`${cart.storeName} · ${brl(cart.subtotal)} em jogos`, cart.storeLogo),
+    renderStoreName(t('storeProducts', cart.storeName, brl(cart.subtotal)), cart.storeLogo),
     links,
     element('div', 'cart-freight', limit),
     input,
@@ -474,11 +486,11 @@ function renderManualCart(cart) {
 
 function renderManualForm(carts) {
   const form = element('form', 'manual');
-  const button = element('button', '', 'Recalcular com estes fretes');
+  const button = element('button', '', t('recalculateFreight'));
   button.type = 'submit';
   form.append(
-    element('h2', '', 'Informe o frete destas lojas'),
-    element('p', 'hint', 'Não foi possível cotar automaticamente. Veja o frete no site da loja, com o seu CEP, e digite aqui.'),
+    element('h2', '', t('manualTitle')),
+    element('p', 'hint', t('manualHint')),
     ...carts.map(renderManualCart),
     button,
   );
@@ -488,7 +500,7 @@ function renderManualForm(carts) {
       .map((row) => [row.dataset.key, parseAmount(row.querySelector('input').value)])
       .filter(([, value]) => value !== null);
     if (entries.length === 0) {
-      setStatus('Digite ao menos um valor de frete válido.', true);
+      setStatus(t('invalidFreight'), true);
       return;
     }
     for (const [key, value] of entries) manualFreight.set(key, value);
@@ -501,14 +513,14 @@ function renderResult(result) {
   const nodes = result.plans.map((plan, index) => renderPlan(plan, index === 0));
 
   if (result.plans.length === 0 && result.unquotedCarts.length === 0) {
-    nodes.push(renderNotice('Nenhuma combinação pôde ser cotada.', []));
+    nodes.push(renderNotice(t('noCombination'), []));
   }
   if (result.unquotedCarts.length > 0) nodes.unshift(renderManualForm(result.unquotedCarts));
   if (result.missingGames.length > 0) {
-    nodes.push(renderNotice('Sem oferta nova disponível:', result.missingGames.map(gameName)));
+    nodes.push(renderNotice(t('noOffer'), result.missingGames.map(gameName)));
   }
   if (!result.proven) {
-    nodes.push(renderNotice('O limite de cotações foi atingido; pode existir combinação mais barata.', []));
+    nodes.push(renderNotice(t('quoteLimit'), []));
   }
   elements.results.replaceChildren(...nodes);
   elements['end-title'].hidden = nodes.length === 0;
@@ -518,11 +530,11 @@ async function run(event) {
   event.preventDefault();
   const zipCode = elements['zip-code'].value.replace(/\D/g, '');
   if (zipCode.length !== 8) {
-    setStatus('Informe um CEP com 8 dígitos.', true);
+    setStatus(t('invalidZip'), true);
     return;
   }
   if (games.size === 0) {
-    setStatus('Adicione pelo menos um jogo.', true);
+    setStatus(t('noGames'), true);
     return;
   }
 
@@ -539,7 +551,7 @@ async function run(event) {
   const cancellableFetch = (url, options) => fetch(url, { ...options, signal: AbortSignal.any([options.signal, signal]) });
 
   try {
-    setStatus('Buscando ofertas...');
+    setStatus(t('fetchingOffers'));
     const catalogs = await Promise.all([...games.keys()].map(async (slug) => {
       const catalog = await fetchCatalog(slug, cancellableFetch);
       return { ...catalog, offers: await applyStoreDiscounts(catalog.offers, cancellableFetch) };
@@ -566,8 +578,8 @@ async function run(event) {
     elements.results.replaceChildren();
     elements['end-title'].hidden = true;
     elements.setup.open = true;
-    if (signal.aborted) setStatus('Busca cancelada.');
-    else setStatus(error.message, true);
+    if (signal.aborted) setStatus(t('searchCancelled'));
+    else setStatus(errorText(error), true);
   } finally {
     setSearching(false);
   }
@@ -575,8 +587,7 @@ async function run(event) {
 
 // Recolhe a configuração para dar espaço aos resultados; o título reabre e mostra o resumo.
 function collapseSetup(zipCode) {
-  const count = games.size === 1 ? '1 jogo' : `${games.size} jogos`;
-  elements['setup-info'].textContent = `${count} · CEP ${maskZipCode(zipCode)}`;
+  elements['setup-info'].textContent = t('setupInfo', t('gameCount', games.size), maskZipCode(zipCode));
   elements.setup.classList.add('collapsible');
   elements.setup.querySelector('summary').tabIndex = 0;
   elements.setup.open = false;
@@ -590,7 +601,7 @@ function isDarkMode() {
 function applyColorMode(mode) {
   if (mode) document.documentElement.dataset.color = mode;
   const dark = isDarkMode();
-  const label = dark ? 'Ativar modo claro' : 'Ativar modo escuro';
+  const label = t(dark ? 'colorLight' : 'colorDark');
   elements['color-toggle'].title = label;
   elements['color-toggle'].setAttribute('aria-label', label);
   elements['icon-sun'].hidden = !dark;
@@ -600,7 +611,7 @@ function applyColorMode(mode) {
 function setSearching(searching) {
   elements.run.disabled = searching;
   elements.cancel.hidden = !searching;
-  elements['run-label'].textContent = searching ? 'Pesquisando...' : RUN_LABEL;
+  elements['run-label'].textContent = t(searching ? 'searching' : 'run');
   searchAbort = searching ? new AbortController() : null;
   showTurnDice(searching ? 1 : 0);
 }
@@ -623,7 +634,7 @@ async function recalculate() {
   try {
     await optimize();
   } catch (error) {
-    setStatus(error.message, true);
+    setStatus(errorText(error), true);
   } finally {
     setSearching(false);
   }
@@ -636,7 +647,7 @@ async function optimize(onProgress = null) {
   let quoted = 0;
   const quoteFreight = createPanelQuoter(zipCode, signal, (storeName) => {
     quoted += 1;
-    setStatus(`Loja ${quoted}: cotando frete em ${storeName}`);
+    setStatus(t('quoting', quoted, storeName));
     showTurnDice(quoted);
   });
 
@@ -653,11 +664,11 @@ async function optimize(onProgress = null) {
   renderCoupons();
   if (result.cancelled) {
     renderCancelledResult(result.plans);
-    setStatus(result.plans.length > 0 ? 'Busca cancelada. Estes são os melhores resultados até aqui.' : 'Busca cancelada.');
+    setStatus(t(result.plans.length > 0 ? 'searchCancelledPartial' : 'searchCancelled'));
     return;
   }
   renderResult(result);
-  setStatus(quoted === 0 ? 'Recalculado.' : `${quoted} cotações feitas.`);
+  setStatus(quoted === 0 ? t('recalculated') : t('quotesDone', quoted));
 }
 
 // Trocar o modo só reordena: as cotações já feitas valem para os dois.
@@ -667,6 +678,7 @@ async function changePaymentMode() {
 }
 
 async function start() {
+  translatePage();
   await restoreInterruptedQuotes();
   const { zipCode, paymentMode: savedMode, colorMode } = await chrome.storage.local.get(['zipCode', 'paymentMode', 'colorMode']);
   applyColorMode(colorMode);
@@ -689,7 +701,7 @@ async function start() {
   });
   elements['refresh-tabs'].addEventListener('click', refreshFromTabs);
   elements.cancel.addEventListener('click', () => {
-    setStatus('Cancelando...');
+    setStatus(t('cancelling'));
     searchAbort?.abort();
   });
   elements['coupon-form'].addEventListener('submit', addCoupon);

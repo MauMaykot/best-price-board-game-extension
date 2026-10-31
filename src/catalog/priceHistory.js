@@ -3,6 +3,7 @@
 // O histórico traz o menor preço de cada dia e não inclui frete, então a comparação usa só
 // o preço do jogo. A Amazon fica de fora dele quando a consulta não tem login.
 
+import { createTranslator } from '../i18n/i18n.js';
 import { graphql } from './offers.js';
 
 const PRODUCT_HISTORY_QUERY = `
@@ -31,11 +32,8 @@ const NEAR_LOWEST = 0.05;
 const BELOW_AVERAGE = 0.03;
 const ABOVE_AVERAGE = 0.05;
 const TOO_GOOD = 0.3;
-const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 
-const brl = (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const percent = (ratio) => `${Math.round(Math.abs(ratio) * 100)}%`;
-const monthOf = (date) => `${MONTHS[Number(date.slice(5, 7)) - 1]}/${date.slice(0, 4)}`;
 const daysBetween = (date, today) => (today.getTime() - Date.parse(date)) / DAY_MS;
 
 export async function fetchPriceHistory(slug, fetchImpl = fetch) {
@@ -53,7 +51,7 @@ export async function fetchPriceHistory(slug, fetchImpl = fetch) {
   return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
-export function describePrice(price, history, today = new Date()) {
+export function describePrice(price, history, today = new Date(), { t, brl, month } = createTranslator('pt')) {
   if (history.length < MIN_POINTS) return null;
 
   const lowest = history.reduce((best, point) => (point.price < best.price ? point : best));
@@ -63,26 +61,26 @@ export function describePrice(price, history, today = new Date()) {
   const versusAverage = average === null ? 0 : price / average - 1;
   const lastCheaper = history.findLast((point) => point.price < price);
 
-  const detail = aboveLowest > LOWEST_TOLERANCE ? `Menor preço: ${brl(lowest.price)} em ${monthOf(lowest.date)}` : null;
+  const detail = aboveLowest > LOWEST_TOLERANCE ? t('priceLowestDetail', brl(lowest.price), month(lowest.date)) : null;
 
   // Um preço muito fora da curva costuma ser outro produto ou vendedor duvidoso, não pechincha.
   if (versusAverage <= -TOO_GOOD) {
-    return { tone: 'high', headline: `${percent(versusAverage)} abaixo da média de 6 meses: confira o anúncio`, detail };
+    return { tone: 'high', headline: t('priceTooGood', percent(versusAverage)), detail };
   }
   if (aboveLowest <= LOWEST_TOLERANCE) {
-    return { tone: 'great', headline: `Menor preço desde ${monthOf(history[0].date)}, início do histórico`, detail };
+    return { tone: 'great', headline: t('priceLowest', month(history[0].date)), detail };
   }
   if (daysBetween(lastCheaper.date, today) > RECENT_DAYS) {
-    return { tone: 'good', headline: `Melhor preço desde ${monthOf(lastCheaper.date)}`, detail };
+    return { tone: 'good', headline: t('priceBestSince', month(lastCheaper.date)), detail };
   }
   if (aboveLowest <= NEAR_LOWEST) {
-    return { tone: 'good', headline: `Perto do menor preço: ${percent(aboveLowest)} acima`, detail };
+    return { tone: 'good', headline: t('priceNearLowest', percent(aboveLowest)), detail };
   }
   if (versusAverage <= -BELOW_AVERAGE) {
-    return { tone: 'good', headline: `${percent(versusAverage)} abaixo da média de 6 meses`, detail };
+    return { tone: 'good', headline: t('priceBelowAverage', percent(versusAverage)), detail };
   }
   if (versusAverage >= ABOVE_AVERAGE) {
-    return { tone: 'high', headline: `${percent(versusAverage)} acima da média de 6 meses`, detail };
+    return { tone: 'high', headline: t('priceAboveAverage', percent(versusAverage)), detail };
   }
-  return { tone: 'neutral', headline: 'Dentro da média de 6 meses', detail };
+  return { tone: 'neutral', headline: t('priceWithinAverage'), detail };
 }

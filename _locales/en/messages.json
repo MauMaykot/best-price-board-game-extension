@@ -1,0 +1,4 @@
+{
+  "appName": { "message": "Board Game Best Price" },
+  "appDescription": { "message": "Finds the lowest total cart combination across Compara Jogos stores, with real shipping." }
+}

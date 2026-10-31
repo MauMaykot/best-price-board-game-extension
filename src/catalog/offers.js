@@ -3,6 +3,8 @@
 // Usa a API GraphQL do site, a mesma do botão "Mostrar mais". A página do item não serve
 // como fonte: ela traz só 6 ofertas novas, com as lojas em destaque primeiro.
 
+import { localizedError } from '../i18n/i18n.js';
+
 const GRAPHQL_URL = 'https://api.comparajogos.com.br/v1/graphql';
 const PAGE_SIZE = 50;
 const TIMEOUT_MS = 15000;
@@ -131,7 +133,7 @@ export async function fetchCatalog(slug, fetchImpl = fetch) {
 
 async function requestPrices(fetchImpl, slug, offset) {
   const { product } = await graphql(fetchImpl, 'productPrices', PRODUCT_PRICES_QUERY, { slug, limit: PAGE_SIZE, offset });
-  if (!product[0]) throw new Error(`Jogo não encontrado: ${slug}.`);
+  if (!product[0]) throw localizedError('gameNotFound', slug);
   return product[0];
 }
 
@@ -142,7 +144,7 @@ export async function graphql(fetchImpl, operationName, query, variables) {
     body: JSON.stringify({ operationName, query, variables }),
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
-  if (!response.ok) throw new Error(`Compara Jogos respondeu ${response.status}.`);
+  if (!response.ok) throw localizedError('catalogStatus', response.status);
 
   const { data, errors } = await response.json();
   if (errors?.length) throw new Error(`Compara Jogos: ${errors[0].message}`);

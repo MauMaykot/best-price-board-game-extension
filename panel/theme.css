@@ -122,6 +122,7 @@ h1 {
 }
 
 .step-title span { color: var(--accent); }
+.step-title b, #payment-mode label b { font-weight: inherit; }
 #setup > .step-title { margin-top: 0; cursor: pointer; }
 #setup:not([open]) > .step-title { margin-bottom: 0; }
 #setup[open] #setup-info { display: none; }

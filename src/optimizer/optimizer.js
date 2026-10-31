@@ -11,6 +11,8 @@
 // Quando os melhores planos só têm carrinhos cotados, nenhum outro plano pode vencer,
 // porque até o custo mínimo possível dos demais já é maior ou igual.
 
+import { localizedError } from '../i18n/i18n.js';
+
 const DEFAULT_MAX_QUOTES = 200;
 const DEFAULT_TOP_K = 3;
 const MAX_GAMES = 12;
@@ -38,7 +40,7 @@ export async function findCheapestCarts({
   const stockedGames = games.filter((game) => offers.some((offer) => offer.gameId === game));
   const missingGames = games.filter((game) => !stockedGames.includes(game));
   if (stockedGames.length > MAX_GAMES) {
-    throw new Error(`Máximo de ${MAX_GAMES} jogos por busca.`);
+    throw localizedError('tooManyGames', MAX_GAMES);
   }
 
   const stores = groupOffersByStore(stockedGames, offers, coupons, PRICE_FIELDS[paymentMode]);

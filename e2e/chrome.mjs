@@ -81,9 +81,11 @@ chrome.stdio[4].on('data', (chunk) => {
 
 const sleep = (ms) => new Promise((done) => { setTimeout(done, ms); });
 
-async function open(url) {
+async function open(url, language = 'pt-BR') {
   const { targetId } = await send('Target.createTarget', { url: 'about:blank' });
   const { sessionId } = await send('Target.attachToTarget', { targetId, flatten: true });
+  const { userAgent } = await send('Browser.getVersion');
+  await send('Emulation.setUserAgentOverride', { userAgent, acceptLanguage: language }, sessionId);
   await send('Runtime.enable', {}, sessionId);
   await send('Page.enable', {}, sessionId);
   await send('Fetch.enable', { patterns: [{ urlPattern: '*' }] }, sessionId);
@@ -123,9 +125,9 @@ async function main() {
   };
   const text = (selector) => page(`document.querySelector('${selector}')?.innerText ?? ''`);
   const type = (selector, value) => page(`(()=>{const i=document.querySelector('${selector}'); i.value='${value}'; i.dispatchEvent(new Event('input'));})()`);
-  const shot = async (name) => {
+  const shot = async (name, target = panel) => {
     if (!SCREENSHOT_DIR) return;
-    const { data } = await send('Page.captureScreenshot', { format: 'png' }, panel);
+    const { data } = await send('Page.captureScreenshot', { format: 'png' }, target);
     writeFileSync(join(SCREENSHOT_DIR, name), Buffer.from(data, 'base64'));
   };
   const finished = () => until(`!document.getElementById('run').disabled`);
@@ -293,6 +295,39 @@ async function main() {
   check('erro não deixa skeleton preso', (await page(`document.querySelectorAll('.skeleton').length`)) === 0);
   check('botão volta depois do erro', (await text('#run')) === 'Encontrar menor valor');
   check('erro reabre a configuração', await page(`document.getElementById('setup').open`));
+
+  // Idioma do navegador: fora de pt, o painel inteiro fica em inglês
+  web.comparaDown = false;
+  web.carts = { tray: [], nuvem: [] };
+  const english = await open(`chrome-extension://${id}/panel/panel.html`, 'en-US');
+  await send('Emulation.setDeviceMetricsOverride', { width: 420, height: 1000, deviceScaleFactor: 1, mobile: false }, english);
+  const inEnglish = async (expression) => (await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true }, english)).result.value;
+  const englishUntil = async (expression) => {
+    const start = Date.now();
+    while (Date.now() - start < 10000) {
+      if (await inEnglish(expression)) return;
+      await sleep(40);
+    }
+    throw new Error(`Tempo esgotado: ${expression}`);
+  };
+  await englishUntil(`document.querySelector('#games')?.innerText.includes('Jogo Alfa')`);
+  check('navegador em inglês detectado', (await inEnglish('navigator.language')) === 'en-US' && (await inEnglish('document.documentElement.lang')) === 'en-US' && (await inEnglish('document.title')) === 'Board Game Best Price');
+  check('textos fixos em inglês', (await inEnglish(`document.querySelector('h1').innerText + '|' + document.getElementById('run').innerText.trim() + '|' + document.querySelector('[for=zip-code]').innerText`)) === 'Best price|Find lowest price|Delivery ZIP code (CEP)');
+  check('atributos em inglês', (await inEnglish(`document.getElementById('game-input').placeholder + '|' + document.getElementById('color-toggle').title`)) === 'Game name or Compara Jogos link|Switch to dark mode');
+  await inEnglish(`(()=>{const i=document.getElementById('game-input'); i.value='beta'; i.dispatchEvent(new Event('input'));})()`);
+  await englishUntil(`document.querySelectorAll('#suggestions button').length > 0`);
+  await inEnglish(`document.querySelector('#suggestions button').click()`);
+  await inEnglish(`document.getElementById('zip-code').value='01310-100'`);
+  await inEnglish(`document.getElementById('run').click()`);
+  await englishUntil(`document.getElementById('run').disabled`);
+  await englishUntil(`!document.getElementById('run').disabled && document.querySelector('.plan-label')`);
+  const englishResult = await inEnglish(`document.getElementById('results').innerText`);
+  check('resultado em inglês, com preço em reais', /WINNER: LOJA NUVEM/.test(englishResult) && /R\$\s*310\.00 upfront/.test(englishResult) && /Upfront discount: 8\.8%/.test(englishResult), englishResult.slice(0, 240));
+  check('sem português no resultado', !/à vista|a prazo|frete|Vencedor|jogos|média/i.test(englishResult), englishResult);
+  await shot('ingles.png', english);
+  await inEnglish(`document.querySelector('.plan.best').scrollIntoView()`);
+  await shot('ingles-resultado.png', english);
+  check('status em inglês', /quotes? completed/.test(await inEnglish(`document.getElementById('status').innerText`)));
 
   check('nenhum endereço fora da internet simulada', web.unexpected.length === 0, web.unexpected.join(' '));
 }

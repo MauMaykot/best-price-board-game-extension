@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { discountPercent, formatPercent, summarizeDiscounts } from '../src/optimizer/discounts.js';
+import { discountPercent, summarizeDiscounts } from '../src/optimizer/discounts.js';
 import { findCheapestCarts } from '../src/optimizer/optimizer.js';
 
 const offer = (gameId, storeId, price, listPrice) => ({ gameId, storeId, storeName: storeId, price, listPrice, url: `https://${storeId}/${gameId}` });
@@ -8,12 +8,10 @@ const quoteFreight = async () => ({ cost: 30 });
 
 const planFor = async (options) => (await findCheapestCarts({ quoteFreight, ...options })).plans[0];
 
-test('calcula e formata o percentual', () => {
+test('calcula o percentual', () => {
   assert.equal(discountPercent(200, 180), 10);
   assert.equal(discountPercent(304, 282.72), 7);
   assert.equal(discountPercent(1420.9, 1278.81), 10);
-  assert.equal(formatPercent(7.7), '7,7%');
-  assert.equal(formatPercent(10), '10%');
 });
 
 test('sem desconto dá zero, sem dividir por zero', () => {

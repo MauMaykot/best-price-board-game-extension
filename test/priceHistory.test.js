@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { describePrice, fetchPriceHistory } from '../src/catalog/priceHistory.js';
+import { createTranslator } from '../src/i18n/i18n.js';
 
 const today = new Date('2026-10-30T12:00:00Z');
 
@@ -60,6 +61,13 @@ test('dentro da média de 6 meses', () => {
   const points = history({ from: 100, to: 51, price: 110 }, { from: 50, to: 0, price: 100 });
   const note = describePrice(106, points, today);
   assert.equal(note.tone, 'neutral');
+});
+
+test('indicador em inglês', () => {
+  const points = history({ from: 400, to: 201, price: 90 }, { from: 200, to: 0, price: 130 });
+  const note = describePrice(110, points, today, createTranslator('en'));
+  assert.equal(note.headline, 'Best price since Apr 2026');
+  assert.match(note.detail, /^Lowest price: R\$\s*90\.00 in Sep 2025$/);
 });
 
 test('histórico curto não gera indicador', () => {

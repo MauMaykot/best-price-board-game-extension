@@ -9,7 +9,7 @@ Price comparison sites show the lowest price per game. That is not the lowest to
   <img src="docs/result-dark.png" alt="Side panel in dark mode with the winning cart combination" width="300">
 </p>
 
-<sub>Screenshots from the offline test suite, so stores and prices are simulated. The UI is in Brazilian Portuguese.</sub>
+<sub>Screenshots from the offline test suite, so stores and prices are simulated.</sub>
 
 ## What it does
 
@@ -20,6 +20,7 @@ Price comparison sites show the lowest price per game. That is not the lowest to
 - Applies per-store coupons to products only, and flags prices against up to 5 years of price history.
 - Fills the winning cart in the user's own session, so checkout continues on the store's site.
 - Asks the user for shipping when a store cannot be quoted automatically, then shows the maximum shipping at which that store would still win.
+- Follows the browser language: Portuguese for `pt-*`, English for everything else. Prices stay in BRL, and the CLI stays in Portuguese.
 
 ## Architecture
 
@@ -95,8 +96,8 @@ Automation has real effects on the systems it touches, and this project keeps th
 
 Testing against live stores is slow and has side effects, so daily testing is fully offline:
 
-- `npm test` runs 217 unit tests with store responses as fixtures.
-- `npm run test:chrome` runs 53 checks against the real extension in headless Chrome. Every request is intercepted through the DevTools Protocol, and any unexpected URL fails the run, which also proves that manual-only stores receive no automatic requests.
+- `npm test` runs 225 unit tests with store responses as fixtures.
+- `npm run test:chrome` runs 59 checks against the real extension in headless Chrome. Every request is intercepted through the DevTools Protocol, and any unexpected URL fails the run, which also proves that manual-only stores receive no automatic requests.
 
 Network calls have timeouts (GraphQL 15s, store sessions 20s), and a failed store becomes a manual input instead of failing the search.
 

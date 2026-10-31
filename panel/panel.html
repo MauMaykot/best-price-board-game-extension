@@ -9,9 +9,9 @@
 </head>
 <body>
   <header>
-    <h1>Melhor compra</h1>
-    <span class="byline">- Por <a href="https://github.com/MauMaykot" target="_blank" rel="noreferrer">Maurício Maykot</a></span>
-    <button id="color-toggle" type="button" aria-label="Ativar modo escuro" title="Ativar modo escuro">
+    <h1 data-i18n="title"></h1>
+    <span class="byline"><span data-i18n="byline"></span> <a href="https://github.com/MauMaykot" target="_blank" rel="noreferrer">Maurício Maykot</a></span>
+    <button id="color-toggle" type="button">
       <svg id="icon-moon" viewBox="0 0 24 24" aria-hidden="true">
         <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"></path>
       </svg>
@@ -24,56 +24,56 @@
 
   <form id="search-form">
     <details id="setup" open>
-      <summary class="step-title" tabindex="-1"><span>1.</span> Configuração <small id="setup-info"></small></summary>
-      <label for="zip-code">CEP de entrega</label>
+      <summary class="step-title" tabindex="-1"><span>1.</span> <b data-i18n="setupTitle"></b> <small id="setup-info"></small></summary>
+      <label for="zip-code" data-i18n="zipLabel"></label>
     <input id="zip-code" inputmode="numeric" autocomplete="off" placeholder="00000-000" maxlength="9">
 
-    <label for="game-input">Adicionar jogo</label>
-    <input id="game-input" autocomplete="off" placeholder="Nome do jogo ou link do Compara Jogos">
+    <label for="game-input" data-i18n="gameLabel"></label>
+    <input id="game-input" autocomplete="off" data-i18n-placeholder="gamePlaceholder">
     <ul id="suggestions" hidden></ul>
 
     <ul id="games"></ul>
-    <p id="games-empty" class="hint">Abra a página de um jogo no Compara Jogos ou busque pelo nome.</p>
-    <button id="refresh-tabs" type="button">Atualizar das abas abertas</button>
+    <p id="games-empty" class="hint" data-i18n="gamesEmpty"></p>
+    <button id="refresh-tabs" type="button" data-i18n="refreshTabs"></button>
     </details>
 
-    <h2 class="step-title"><span>2.</span> Pesquisa</h2>
+    <h2 class="step-title"><span>2.</span> <b data-i18n="searchTitle"></b></h2>
     <fieldset id="payment-mode">
-      <legend>Menor valor pagando</legend>
-      <label><input type="radio" name="payment-mode" value="cash" checked> À vista</label>
-      <label><input type="radio" name="payment-mode" value="installment"> A prazo</label>
+      <legend data-i18n="paymentLegend"></legend>
+      <label><input type="radio" name="payment-mode" value="cash" checked> <b data-i18n="payCash"></b></label>
+      <label><input type="radio" name="payment-mode" value="installment"> <b data-i18n="payInstallment"></b></label>
     </fieldset>
 
     <button id="run" type="submit">
       <span id="turn-dice"></span>
-      <span id="run-label">Encontrar menor valor</span>
+      <span id="run-label" data-i18n="run"></span>
     </button>
-    <button id="cancel" type="button" hidden>Cancelar busca</button>
+    <button id="cancel" type="button" data-i18n="cancelSearch" hidden></button>
   </form>
 
   <p id="status" role="status" hidden></p>
 
-  <h2 id="end-title" class="step-title" hidden><span>3.</span> Resultado</h2>
+  <h2 id="end-title" class="step-title" hidden><span>3.</span> <b data-i18n="resultTitle"></b></h2>
 
   <details id="coupons" hidden>
-    <summary>Tenho um cupom</summary>
+    <summary data-i18n="couponSummary"></summary>
     <form id="coupon-form">
-      <label for="coupon-store">Loja</label>
+      <label for="coupon-store" data-i18n="couponStore"></label>
       <select id="coupon-store"></select>
-      <label for="coupon-code">Código do cupom</label>
-      <input id="coupon-code" autocomplete="off" placeholder="Opcional, para lembrar na hora de comprar">
-      <label for="coupon-value">Desconto</label>
+      <label for="coupon-code" data-i18n="couponCode"></label>
+      <input id="coupon-code" autocomplete="off" data-i18n-placeholder="couponCodePlaceholder">
+      <label for="coupon-value" data-i18n="couponDiscount"></label>
       <div class="coupon-amount">
         <input id="coupon-value" inputmode="decimal" autocomplete="off" placeholder="0">
-        <select id="coupon-type" aria-label="Tipo de desconto">
+        <select id="coupon-type" data-i18n-aria-label="couponType">
           <option value="percent">%</option>
           <option value="fixed">R$</option>
         </select>
       </div>
-      <button id="apply-coupon" type="submit">Aplicar cupom</button>
+      <button id="apply-coupon" type="submit" data-i18n="couponApply"></button>
     </form>
     <ul id="coupon-list"></ul>
-    <p class="hint">O cupom vale só para os jogos, não para o frete.</p>
+    <p class="hint" data-i18n="couponHint"></p>
   </details>
 
   <section id="results" aria-live="polite"></section>
